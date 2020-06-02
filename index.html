@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style>
+
+.links line {
+  stroke: #999;
+  stroke-opacity: 0.6;
+}
+
+.nodes circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+.header{
+  width: 2500px ;
+  text-align: center;
+  background: grey;
+  color: white;
+  font-size: 30px;
+  border-width: 5px ;
+  border-radius: 5px;
+}
+
+text {
+  font-family: sans-serif;
+  font-size: 10px;
+}
+body {font-family: Arial, Helvetica, sans-serif;}
+
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 100px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  margin-bottom: 200px;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 80%;
+  height: 120%;
+}
+
+/* The Close Button */
+.close {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+</style>
+<h1 class="header">Marvel Social Network Graph</h1>
+<svg width="2500" height="2000"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.js"></script>
+<script>
+var oldToNewMap=new Map();
+var superHeroDetails;
+var nodeConnections
+function displayBio(superhero)
+{
+  document.getElementById("heroName").innerHTML=superhero["name"];
+  var str = JSON.stringify(superhero["biography"], null, 2);
+  console.log(str);
+  document.getElementById("stats").innerHTML=str;
+}
+function plotWordCloud(heroName)
+{
+  var fill = d3.scaleOrdinal(d3.schemeCategory20);
+  
+  var data = [
+      {text: "Hello", value:6260},
+      {text: "happy", value:5370},
+      {text: "beautiful", value:2480},
+      {text: "rainbow", value:4350},
+      {text: "unicorn", value:1250},
+      {text: "glitter", value:3140},
+      {text: "happy", value:990},
+      {text: "pie", value:4230}];
+  data=nodeConnections[heroName];
+  var layout = d3.layout.cloud()
+      .size([400, 400])
+      .words(data)
+      .font("Impact")
+      .padding(5)
+      .rotate(function() { return ~~(Math.random() * 2) * 90; })
+      .on("end", draw);
+
+  layout.start();
+
+  function draw(words) {
+      d3.select("#demo1")
+        .append("g")
+        .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+        .selectAll("text")
+        .data(words)
+        .enter()
+        .append("text")
+        .text((d) => d.text)
+        .style("font-size", (d) => (d.size +5)+"px")
+        .style("font-family", (d) => d.font)
+        .style("fill", (d, i) => fill(i))
+        .attr("text-anchor", "middle")
+        .attr("transform", (d) => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")");
+  }
+
+}
+function plotBarChart(heroName,superhero)
+{
+  var fill = d3.scaleOrdinal(d3.schemeCategory10)
+  var margin = {top: 10, right: 30, bottom: 90, left: 40},
+    width = 460 - margin.left - margin.right,
+    height = 450 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+document.getElementById("barChart").innerHTML="";
+var svg = d3.select("#barChart")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+  // console.log(superhero);
+    var x = d3.scaleBand()
+  .range([ 0, width ])
+  .domain(Object.keys(superhero["powerstats"]))
+  .padding(0.2);
+svg.append("g")
+  .attr("transform", "translate(0," + height + ")")
+  .call(d3.axisBottom(x))
+  .selectAll("text")
+    .attr("transform", "translate(-10,0)rotate(-45)")
+    .style("text-anchor", "end");
+
+// Add Y axis
+var y = d3.scaleLinear()
+  .domain([0, 100])
+  .range([ height, 0]);
+svg.append("g")
+  .call(d3.axisLeft(y));
+dataArray=[];
+
+for(key in superhero["powerstats"])
+{
+  tempArray=[];
+  tempArray.push(key);
+  tempArray.push(superhero["powerstats"][key]);
+  dataArray.push(tempArray);
+}
+// console.log(dataArray)
+svg.selectAll("mybar")
+  .data(dataArray)
+  .enter()
+  .append("rect")
+    .attr("x", function(d) {  return x(d[0]); })
+    .attr("width", x.bandwidth())
+    .style("fill", (d, i) => fill(i))
+    // no bar at the beginning thus:
+    .attr("height", function(d) { return height - y(0); }) // always equal to 0
+    .attr("y", function(d) { return y(0); })
+
+// Animation
+svg.selectAll("rect")
+  .transition()
+  .duration(800)
+  .attr("y", function(d) { return y(d[1]); })
+  .attr("height", function(d) { return height - y(d[1]); })
+  .delay(function(d,i){ return(i*100)})
+
+   svg.append("text")             
+      .attr("transform",
+            "translate(" + (width/2) + " ," + 
+                           (height + margin.top + 50) + ")")
+      .style("text-anchor", "middle")
+      .text("Power Stats");
+
+      svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x",0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .text("Power Value");
+}
+d3.csv("map_file.csv", function(data) {
+  for (index = 0; index < data.length; index++)
+  { 
+      oldToNewMap.set(data[index].old,data[index].new);
+  //     if(data[index].old=="BLACK WIDOW/NATASHA")
+  //       console.log(oldToNewMap.get(data[index].old));
+  // } 
+  // console.log(oldToNewMap);
+}
+
+});
+d3.json("superhero_details.json", function(data) {
+  superHeroDetails=data;
+
+});
+d3.json("nodeConnections.json",function(data)
+{
+    nodeConnections=data;
+});
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+
+var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+var simulation = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge", d3.forceManyBody())
+    .force("center", d3.forceCenter(width / 2, height / 2));
+
+d3.json("jsonFile.json", function(error, graph) {
+  if (error) throw error;
+
+  var fill = d3.scaleOrdinal(d3.schemeCategory20);
+  var myScale = d3.scaleLinear()
+  .domain([d3.max(graph.links, function(d) { return d.value }),d3.min(graph.links, function(d) { return d.value })])
+  .range([0, 1000]);
+
+  var link = svg.append("g")
+      .attr("class", "links")
+    .selectAll("line")
+    .data(graph.links)
+    .enter().append("line");
+
+  var node = svg.append("g")
+    .attr("class", "nodes")
+    .selectAll("g")
+    .data(graph.nodes)
+    .enter().append("g")
+    .on("click", function(d){
+        console.log(d.id);
+        var heroName=oldToNewMap.get(d.id.trim());
+        var elem = document.createElement("img");
+        elem.height=300;
+        elem.width=300;
+        elem.setAttribute("src", "./Data/images/"+heroName+".png");
+        document.getElementById("imageDiv").innerHTML="";
+        document.getElementById("imageDiv").appendChild(elem);
+        plotWordCloud(d.id);
+        plotBarChart(d.id,superHeroDetails[heroName]);
+        displayBio(superHeroDetails[heroName]);
+        modal.style.display = "block";
+
+    });
+    
+  var circles = node.append("circle")
+      .attr("r", 10)
+      .on("mouseover", function(d)
+        {
+          d3.select(this).attr("r", 15);
+        })
+      .on("mouseout", function(){
+            d3.select(this).attr("r", 10);
+
+          })
+      .style("fill", (d, i) => fill(i))
+            .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+  var lables = node.append("text")
+      .text(function(d) {
+        return d.id;
+      })
+      .style("font-size", "15px")
+      .style("font-weight", "bold")
+      .attr('x', 15)
+      .attr('y', 3);
+
+  node.append("title")
+      .text(function(d) { return d.id; });
+
+  simulation
+      .nodes(graph.nodes)
+      .on("tick", ticked);
+
+  simulation.force("link")
+      .links(graph.links)
+      .distance(function(d) { return myScale(d.value); });
+
+  function ticked() {
+    link
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node
+        .attr("transform", function(d) {
+          return "translate(" + d.x + "," + d.y + ")";
+        })
+  }
+});
+function dragstarted(d) {
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged(d) {
+  d.fx = d3.event.x;
+  d.fy = d3.event.y;
+}
+
+function dragended(d) {
+  if (!d3.event.active) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
+
+</script>
+<body>
+  <h2>Modal Example</h2>
+
+<!-- Trigger/Open The Modal -->
+<button id="myBtn">Open Modal</button>
+<style>
+    .grid-wrapper {
+        display: grid;
+        grid-template-columns: 50% 50%;
+    }
+    .hero-bio-div{
+        background-color: #bdbdbd;
+        border: 3px #688590 solid;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        min-height: 300px;
+             
+    }
+    .hero-stats-div {
+        text-align: center;
+        padding:auto;
+        background-color: #bdbdbd;
+        border: 3px #688590 solid;
+        border-radius: 6px;
+        vertical-align:middle;   
+    }
+    .hero-word-cloud {
+        text-align: center;
+        padding-bottom: 50px;
+        background-color: #bdbdbd;
+        border: 3px #688590 solid;
+        border-radius: 6px;
+        margin-bottom: 50px;
+        
+    }
+    
+    .modal-content {
+        background-color: gainsboro;
+        border: 4px solid #566760;
+        border-radius: 6px;
+    }
+    .hero-image-div
+    {
+        text-align: center;
+        padding: 20px;
+        background-color: #bdbdbd;
+        border: 3px #688590 solid;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        
+    }
+</style>
+<!-- The Modal -->
+<div id="myModal" class="modal">
+  <h3 id = "hero"></h3>
+  <!-- Modal content -->
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3 id="heroName"></h3>
+      <div class="grid-wrapper">
+
+          <div id="imageDiv" class="hero-image-div">
+          </div>
+          <div class="hero-bio-div">
+            <pre id="stats">
+            </pre>
+          </div>
+          <div  class="right-stats">
+            
+              <div id="barChart" class="hero-stats-div">
+                  Stats
+              </div>
+          </div>
+          
+          <div class="hero-word-cloud">
+            <svg id="demo1" width="400" height="400"></svg>
+          </div>
+      
+      </div>
+      
+</div>
+
+
+<script>
+// Get the modal
+var modal = document.getElementById("myModal");
+
+// Get the button that opens the modal
+var btn = document.getElementById("myBtn");
+
+// Get the <span> element that closes the modal
+var span = document.getElementsByClassName("close")[0];
+
+// When the user clicks the button, open the modal 
+btn.onclick = function() {
+  modal.style.display = "block";
+}
+
+// When the user clicks on <span> (x), close the modal
+span.onclick = function() {
+  modal.style.display = "none";
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+  if (event.target == modal) {
+    modal.style.display = "none";
+  }
+}
+</script>
+</body>
+</html>

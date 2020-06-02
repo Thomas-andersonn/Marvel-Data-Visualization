@@ -1,0 +1,86 @@
+ds<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+  svg circle.node {
+  fill: #3b5998;
+  stroke: #1b3978;
+  stroke-width: 1.5px;
+}
+
+svg line.link {
+  stroke: #222;
+  stroke-opacity: .6;
+  stroke-width: 2px;
+}
+
+div.tooltip {   
+  position: absolute;           
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  width: 80px;                  
+  height: 28px;                 
+  padding: 2px;             
+  font: 12px sans-serif;        
+  background: #8fb3de;   
+  border: 0px;      
+  border-radius: 8px;           
+  pointer-events: none;         
+}
+</style>
+<body>
+  <script src = "https://d3js.org/d3.v4.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.js"></script>
+
+  <script>
+var nodeConnections;
+d3.json("nodeConnections.json",function(data)
+{
+    nodeConnections=data;
+    plotWordCloud("VISION"); 
+function plotWordCloud(heroName)
+{
+  var fill = d3.scaleOrdinal(d3.schemeCategory20);
+  
+  var data = [
+      {text: "Hello", value:6260},
+      {text: "happy", value:5370},
+      {text: "beautiful", value:2480},
+      {text: "rainbow", value:4350},
+      {text: "unicorn", value:1250},
+      {text: "glitter", value:3140},
+      {text: "happy", value:990},
+      {text: "pie", value:4230}];
+  data=nodeConnections[heroName];
+  var layout = d3.layout.cloud()
+      .size([2000, 3000])
+      .words(data)
+      .font("Impact")
+      .padding(5)
+      .rotate(function() { return ~~(Math.random() * 2) * 90; })
+      .on("end", draw);
+
+  layout.start();
+
+  function draw(words) {
+      d3.select("#wordCloud")
+        .append("g")
+        .attr("transform", "translate(" + layout.size()[0] / 2 + "," + layout.size()[1] / 2 + ")")
+        .selectAll("text")
+        .data(words)
+        .enter()
+        .append("text")
+        .text((d) => d.text)
+        .style("font-size", (d) => d.size + "px")
+        .style("font-family", (d) => d.font)
+        .style("fill", (d, i) => fill(i))
+        .attr("text-anchor", "middle")
+        .attr("transform", (d) => "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")");
+  }
+
+}
+
+});
+
+  </script>
+      
